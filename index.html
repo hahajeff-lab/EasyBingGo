@@ -150,9 +150,71 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.3; }
         }
+
+        /* 說明圖示 (i) */
+.info-icon {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    width: 22px;
+    height: 22px;
+    border: 1px solid #888;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.info-icon:hover {
+    border-color: var(--line-color);
+    color: var(--line-color);
+}
+
+/* 說明提示框 */
+.info-overlay {
+    display: none;
+    position: fixed;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(20, 20, 20, 0.95);
+    padding: 25px;
+    border: 1px solid #444;
+    border-radius: 12px;
+    z-index: 200; /* 高於賓果提示框 */
+    width: 240px;
+    text-align: left;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.info-title {
+    font-weight: bold;
+    color: var(--line-color);
+    margin-bottom: 15px;
+    display: block;
+}
+
+.info-content {
+    font-size: 0.9rem;
+    color: #ccc;
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
     </style>
 </head>
 <body>
+<div class="info-icon" onclick="toggleInfo(true)">i</div>
+
+<div id="infoBox" class="info-overlay">
+    <span class="info-title">操作說明</span>
+    <div class="info-content"><b>填寫模式:</b><br>-點擊格子填寫數字<br>-點擊已填寫的格子可清除<br>-填寫完畢後點擊「開始遊戲」<br>
+        <b>遊戲模式:</b><br>-點擊數字後點選下方「確認」或再次選擇數字</div>
+    <button onclick="toggleInfo(false)" style="width: 100%;">我知道了</button>
+</div>
 
     <div class="header-section">
         <div class="score-bar">SCORE: <span id="score">0</span></div>
@@ -354,6 +416,10 @@
             checkButtons();
         }
 
+        function toggleInfo(show) {
+    const infoBox = document.getElementById('infoBox');
+    infoBox.style.display = show ? 'block' : 'none';
+}
         initGrid();
     </script>
 </body>
