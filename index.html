@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>極簡深色賓果 - 閃爍版</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --accent-red: rgba(255, 68, 68, 0.7);
+            --accent-green: #2b8a3e;
+            --accent-cancel: #c92a2a;
+            --pending-color: #fcc419;
+            --line-color: #4dabf7;
+            --border-color: #333;
+            --font-size-ui: 14px;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: -apple-system, sans-serif;
+            font-size: var(--font-size-ui);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 30px 20px;
+            user-select: none;
+        }
+
+        .header-section { text-align: center; margin-bottom: 25px; width: 280px; }
+        .score-bar { font-size: 1.1rem; color: var(--line-color); font-weight: bold; }
+        .status-bar { color: #888; font-size: 0.9rem; margin-top: 5px; }
+
+        .grid-container {
+            position: relative;
+            display: grid;
+            grid-template-columns: repeat(5, 52px);
+            grid-template-rows: repeat(5, 52px);
+            gap: 6px;
+            padding: 6px;
+            background: #252525;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+
+        .cell {
+            background: var(--card-bg);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            font-weight: 500;
+            transition: all 0.2s;
+            font-size: 20px; 
+        }
+
+        .cell.selected::after {
+            content: '';
+            position: absolute;
+            width: 32px; height: 32px;
+            background: var(--accent-red);
+            border-radius: 50%;
+            z-index: 1;
+        }
+
+        .cell.pending {
+            outline: 2px dashed var(--pending-color);
+            outline-offset: -4px;
+            color: var(--pending-color);
+        }
+
+        #lineCanvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 2; }
+
+        .controls { width: 100%; max-width: 280px; }
+        .page { display: none; }
+        .page.active { display: block; }
+
+        .btn-row { display: flex; justify-content: space-between; gap: 10px; margin-top: 10px; }
+
+        button {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-color);
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: var(--font-size-ui);
+            transition: all 0.2s;
+        }
+
+        button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.1); border-color: #666; }
+        button:disabled { opacity: 0.2; cursor: not-allowed; }
+
+        .btn-confirm { border-color: var(--accent-green); color: var(--accent-green); width: 60px; }
+        .btn-cancel { border-color: var(--accent-cancel); color: var(--accent-cancel); width: 60px; }
+        .btn-start { border-color: var(--line-color); color: var(--line-color); }
+        .btn-restart { width: 100%; margin-top: 15px; border-style: dashed; }
+
+        .confirm-row { 
+            display: flex; align-items: center; justify-content: space-between; 
+            background: #1a1a1a; padding: 10px; border-radius: 8px; border: 1px solid #333;
+        }
+
+        .display-box { font-size: 1.4rem; font-weight: bold; color: var(--pending-color); min-width: 40px; text-align: center; }
+
+        /* --- 調整後的提示框樣式 --- */
+        .overlay {
+            display: none; 
+            position: fixed; 
+            top: 40%; /* 向上移動 */
+            left: 50%; 
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9); 
+            padding: 30px 40px; 
+            border: 1px solid var(--line-color);
+            border-radius: 12px; 
+            z-index: 100; 
+            text-align: center;
+            box-shadow: 0 0 30px rgba(77, 171, 247, 0.3);
+        }
+
+        .bingo-text {
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: var(--line-color);
+            letter-spacing: 3px;
+            display: block;
+            margin-bottom: 10px;
+            animation: blink 1s infinite; /* 閃爍效果 */
+            text-shadow: 0 0 10px var(--line-color);
+        }
+
+        .game-over-label {
+            font-size: 0.7rem;
+            color: #888;
+            margin-top: 10px;
+            line-height: 1.5;  /* 增加行高 */
+            max-width: 200px;  /* 限制寬度讓它自動換行，不會變太寬 */
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-section">
+        <div class="score-bar">SCORE: <span id="score">0</span></div>
+        <div class="status-bar" id="status">填寫中</div>
+    </div>
+
+    <div class="grid-container" id="grid">
+        <canvas id="lineCanvas" width="284" height="284"></canvas>
+    </div>
+
+    <div class="controls">
+        <div id="page1" class="page active">
+            <div class="btn-row">
+                <button onclick="clearAll()" style="flex:1">全部清除</button>
+                <button onclick="randomFill()" style="flex:1">隨機填寫</button>
+            </div>
+            <div class="btn-row">
+                <button id="startBtn" class="btn-start" onclick="startGame()" disabled style="flex:1">開始遊戲</button>
+            </div>
+        </div>
+
+        <div id="page2" class="page">
+            <div class="confirm-row">
+                <button class="btn-cancel" onclick="cancelSelect()">X</button>
+                <div class="display-box" id="displayBox">-</div>
+                <button class="btn-confirm" onclick="confirmSelect()">O</button>
+            </div>
+            <button id="restartBtn" class="btn-restart" onclick="resetGame()" disabled>重啟遊戲</button>
+        </div>
+    </div>
+
+    <div id="gameOver" class="overlay">
+        <span class="bingo-text">~BingGO~</span>
+        <div class="game-over-label">遊戲結束<br>按下重啟遊戲再來一局</div>
+    </div>
+
+    <script>
+        // ... (保持先前的 JavaScript 邏輯不變) ...
+        let state = 'FILL';
+        let board = Array(25).fill(null);
+        let selectedIndices = new Set();
+        let currentFillNum = 1;
+        let pendingChoice = null;
+
+        const grid = document.getElementById('grid');
+        const scoreEl = document.getElementById('score');
+        const statusEl = document.getElementById('status');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const displayBox = document.getElementById('displayBox');
+        const canvas = document.getElementById('lineCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function initGrid() {
+            grid.querySelectorAll('.cell').forEach(el => el.remove());
+            for (let i = 0; i < 25; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.index = i;
+                cell.onclick = () => handleCellClick(i);
+                grid.appendChild(cell);
+            }
+        }
+
+        function handleCellClick(index) {
+            if (state === 'FILL') {
+                if (board[index] === null) {
+                    if (currentFillNum <= 25) {
+                        board[index] = currentFillNum++;
+                        renderBoard();
+                    }
+                } else if (board[index] === currentFillNum - 1) {
+                    board[index] = null;
+                    currentFillNum--;
+                    renderBoard();
+                }
+            } else if (state === 'PLAY') {
+                if (board[index] && !selectedIndices.has(index)) {
+                    pendingChoice = index;
+                    displayBox.innerText = board[index];
+                    renderBoard();
+                }
+            }
+            checkButtons();
+        }
+
+        function randomFill() {
+            let nums = Array.from({length: 25}, (_, i) => i + 1);
+            for (let i = nums.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [nums[i], nums[j]] = [nums[j], nums[i]];
+            }
+            board = nums;
+            currentFillNum = 26;
+            renderBoard();
+            checkButtons();
+        }
+
+        function renderBoard() {
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach((cell, i) => {
+                cell.innerText = board[i] || '';
+                cell.classList.toggle('selected', selectedIndices.has(i));
+                cell.classList.toggle('pending', pendingChoice === i);
+            });
+        }
+
+        function checkButtons() {
+            const isFull = board.every(v => v !== null);
+            startBtn.disabled = !isFull;
+            restartBtn.disabled = !isFull;
+        }
+
+        function clearAll() {
+            board.fill(null);
+            currentFillNum = 1;
+            renderBoard();
+            checkButtons();
+        }
+
+        function startGame() {
+            state = 'PLAY';
+            statusEl.innerText = '進行中';
+            document.getElementById('page1').classList.remove('active');
+            document.getElementById('page2').classList.add('active');
+            renderBoard();
+        }
+
+        function confirmSelect() {
+            if (pendingChoice !== null) {
+                selectedIndices.add(pendingChoice);
+                pendingChoice = null;
+                displayBox.innerText = '-';
+                renderBoard();
+                updateGameLogic();
+            }
+        }
+
+        function cancelSelect() {
+            pendingChoice = null;
+            displayBox.innerText = '-';
+            renderBoard();
+        }
+
+        function updateGameLogic() {
+            let lines = 0;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#51cf66';
+            ctx.lineWidth = 1.8;
+            ctx.lineCap = 'round';       // 讓線條末端變成圓頭
+            ctx.shadowBlur = 5;            // 發光範圍
+            ctx.shadowColor = '#51cf66';   // 發光顏色 (通常跟線條顏色一致)
+
+            const check = (indices) => {
+                if (indices.every(i => selectedIndices.has(i))) {
+                    lines++;
+                    drawLine(indices);
+                }
+            };
+
+            for (let i = 0; i < 5; i++) {
+                check([i*5, i*5+1, i*5+2, i*5+3, i*5+4]);
+                check([i, i+5, i+10, i+15, i+20]);
+            }
+            check([0, 6, 12, 18, 24]);
+            check([4, 8, 12, 16, 20]);
+
+            scoreEl.innerText = lines;
+            if (lines >= 5) {
+                state = 'BINGO';
+                statusEl.innerText = '賓果';
+                document.getElementById('gameOver').style.display = 'block';
+            }
+        }
+
+        function drawLine(indices) {
+            const cells = document.querySelectorAll('.cell');
+            const start = cells[indices[0]].getBoundingClientRect();
+            const end = cells[indices[4]].getBoundingClientRect();
+            const gridRect = grid.getBoundingClientRect();
+            ctx.beginPath();
+            ctx.moveTo(start.left - gridRect.left + 26, start.top - gridRect.top + 26);
+            ctx.lineTo(end.left - gridRect.left + 26, end.top - gridRect.top + 26);
+            ctx.stroke();
+        }
+
+        function resetGame() {
+            state = 'FILL';
+            statusEl.innerText = '填寫中';
+            scoreEl.innerText = '0';
+            selectedIndices.clear();
+            pendingChoice = null;
+            displayBox.innerText = '-';
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('page2').classList.remove('active');
+            document.getElementById('page1').classList.add('active');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            renderBoard();
+            checkButtons();
+        }
+
+        initGrid();
+    </script>
+</body>
+</html>
