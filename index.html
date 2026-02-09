@@ -440,27 +440,29 @@ button.active { background: var(--line-color); color: #121212; border-color: var
         }
 
         function processMove(num, pName) {
-            // --- 關鍵修正：判斷是否為「你」 ---
-            let displayName = pName;
-            if (currentTurn === myOrder) {
-                displayName = "你";
-            }
-            // ----------------------------
+    // 確保號碼是數字型別
+    const targetNum = Number(num);
+    
+    // 判斷是否為目前玩家（你）
+    let displayName = pName;
+    let playerRole = pName; // 額外存一個原始標籤供 renderBoard 使用
+    if (currentTurn === myOrder) {
+        displayName = "你";
+    }
 
-            // 將處理後的名稱存入歷史紀錄物件
-            historyLog.push({ player: displayName, num: num });
-            
-            // 使用原始變數名稱 board 與 cpuBoard 進行索引查找
-            const idx = board.indexOf(num); 
-            if (idx !== -1) selectedIndices.add(idx);
-            
-            const cIdx = cpuBoard.indexOf(num); 
-            if (cIdx !== -1) cpuSelectedIndices.add(cIdx);
-            
-            renderBoard(); 
-            updateGameLogic(); 
-            updateHistoryUI();
-        }
+    // 將資料存入歷史紀錄，增加一個 role 屬性來輔助標記顏色
+    historyLog.push({ player: displayName, num: targetNum, role: playerRole });
+    
+    const idx = board.indexOf(targetNum); 
+    if (idx !== -1) selectedIndices.add(idx);
+    
+    const cIdx = cpuBoard.indexOf(targetNum); 
+    if (cIdx !== -1) cpuSelectedIndices.add(cIdx);
+    
+    renderBoard(); 
+    updateGameLogic(); 
+    updateHistoryUI();
+}
 
         function checkNextTurn() {
     if (state !== 'PLAY') return;
@@ -521,19 +523,25 @@ button.active { background: var(--line-color); color: #121212; border-color: var
     }
 }
 
-        function renderBoard() {
-            const cells = grid.querySelectorAll('.cell');
-            cells.forEach((cell, i) => {
-                cell.innerText = board[i] || '';
-                cell.classList.toggle('pending', pendingChoice === i);
-                cell.classList.remove('player-1', 'player-2', 'player-3', 'player-cpu');
-                const log = historyLog.find(l => l.num === board[i]);
-                if (log) {
-                    if (log.player === '電腦') cell.classList.add('player-cpu');
-                    else cell.classList.add(`player-${log.player.split(' ')[1]}`);
-                }
-            });
+       function renderBoard() {
+    const cells = grid.querySelectorAll('.cell');
+    cells.forEach((cell, i) => {
+        cell.innerText = board[i] || '';
+        cell.classList.toggle('pending', pendingChoice === i);
+        cell.classList.remove('player-1', 'player-2', 'player-3', 'player-cpu');
+        
+        const log = historyLog.find(l => l.num === board[i]);
+        if (log) {
+            if (log.role === '電腦') {
+                cell.classList.add('player-cpu');
+            } else {
+                // 從 role (例如 "玩家 1") 抓取數字，就不怕 displayName 變成 "你"
+                const playerNum = log.role.split(' ')[1];
+                cell.classList.add(`player-${playerNum}`);
+            }
         }
+    });
+}
 
 function resetGame() {
     console.log("1. resetGame 開始");
