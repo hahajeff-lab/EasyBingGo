@@ -55,7 +55,7 @@ body {
 }
 
 .score-bar {
-    font-size: 1.1rem;
+    font-size: 1.5rem;
     color: var(--line-color);
     font-weight: bold;
 }
@@ -128,7 +128,9 @@ body {
     transition: all 0.2s;
     overflow: hidden;
 }
-
+.grid-container[style*="grid-template-columns: repeat(7"] .cell {
+    font-size: 0.9rem; /* 專門針對 7x7 的字體大小 */
+}
 /* 玩家圓圈標記 */
 .cell::after {
     content: '';
@@ -213,9 +215,9 @@ button.active { background: var(--line-color); color: #121212; border-color: var
 }
 
 .settings-row { margin-bottom: 12px; text-align: left; }
-.settings-label { display: block; font-size: 11px; color: #888; margin-bottom: 4px; } /* 縮小設定頁面標籤 */
+.settings-label { display: block; font-size: 14px; color: #888; margin-bottom: 4px; } 
 .btn-group { display: flex; gap: 4px; }
-.btn-group button { flex: 1; padding: 5px; font-size: 11px; } /* 縮小設定按鈕字體 */
+.btn-group button { flex: 1; padding: 5px; font-size: 14px; } /* 縮小設定按鈕字體 */
 
 .info-title { font-weight: bold; color: var(--line-color); margin-bottom: 15px; display: block; font-size: 16px; }
 .info-content { font-size: 0.85rem; color: #ccc; line-height: 1.6; margin-bottom: 20px; }
@@ -235,13 +237,13 @@ button.active { background: var(--line-color); color: #121212; border-color: var
 /* --- 圖示與感應區 --- */
 .info-icon { 
     position: absolute; top: 20px; left: 20px; width: 22px; height: 22px; 
-    border: 1px solid #555; border-radius: 50%; display: flex; align-items: center; 
-    justify-content: center; font-size: 14px; color: #555; cursor: pointer;
+    border: 1px solid #c6c6c6; border-radius: 50%; display: flex; align-items: center; 
+    justify-content: center; font-size: 14px; color: #c6c6c6; cursor: pointer;
 }
 
 .top-actions { position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; }
 .action-icon { 
-    font-size: 22px; color: #555; cursor: pointer; 
+    font-size: 22px; color: #c6c6c6; cursor: pointer; 
     padding: 15px; margin: -15px; /* 擴大點擊感應區 */
 }
 
