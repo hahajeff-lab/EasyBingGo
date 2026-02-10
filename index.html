@@ -302,8 +302,9 @@ button.active { background: var(--line-color); color: #121212; border-color: var
     <div id="infoBox" class="info-overlay">
         <span style="color:var(--line-color); font-weight:bold;">操作說明</span><br><br>
         <div style="text-align:left; font-size:0.9rem; line-height:1.6; color:#ccc;">
-            <b>填寫模式:</b> 點擊格子填號，填滿後按開始。<br>
-            <b>遊戲模式:</b> 點擊數字後按 O 確認。
+            <b>填寫模式:</b> 點擊格子填號，點擊最後一個輸入號碼可刪除，填滿後按開始。<br>
+            <b>遊戲模式:</b> 點擊數字後按 O 確認。<br>
+            <b>其他設定:</b> 點擊右上角的三個點。
         </div><br>
         <button onclick="toggleInfo(false)" style="width: 100%;">我知道了</button>
     </div>
@@ -696,4 +697,5 @@ function setPlayers(v) {
     </script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </body>
+
 </html>
