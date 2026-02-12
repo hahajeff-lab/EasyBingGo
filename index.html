@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bingo Game</title>
+    <title>極簡深色賓果 - 專業版</title>
     <style>
         /* --- 基礎變數與重置 --- */
 :root {
@@ -30,6 +30,31 @@ body {
     min-height: 100vh; /* 確保 body 至少跟螢幕一樣高 */
     height: auto;      /* 允許 body 根據內容自動伸展 */
     overflow-y: auto;  /* 如果內容太長，允許捲動 */
+}
+/* --- 全域點擊回饋效果 --- */
+
+/* 1. 針對所有按鈕以及賓果格子 (排除被禁用的狀態) */
+button:not(:disabled):active, 
+.cell:not(:empty):active,
+.info-icon:active,
+.action-icon:active {
+    transform: scale(0.95); /* 輕微縮小 */
+    filter: brightness(1.2); /* 亮度提升，在深色背景下很有質感 */
+    transition: transform 0.1s ease; /* 快速響應 */
+}
+
+/* 2. 針對「重啟」與「紀錄」這兩個 Icon 按鈕的特殊處理 */
+/* 因為它們是正方形，縮放效果會比橫向按鈕更明顯，我們微調一下 */
+.btn-restart-icon:active, 
+.btn-history-icon:active {
+    background-color: rgba(255, 255, 255, 0.1); /* 點擊時背景稍微變白 */
+    transform: scale(0.9); /* Icon 類按鈕縮放可以稍微大一點 */
+}
+
+/* 3. 防止點擊時出現瀏覽器預設的藍色外框 (尤其在手機上) */
+button, .cell, .info-icon, .action-icon {
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
 }
 
 /* --- 頂部區域與指示燈 --- */
@@ -172,11 +197,13 @@ body {
 .page.active * {
     visibility: visible;
 }
-.btn-row { display: flex; 
-    justify-content: space-between; 
-    gap: 10px; margin-top: 5px;
-align-items: stretch;/* 新增這行，讓內部的按鈕自動拉伸到相同高度 */
- }
+.btn-row {
+    display: flex;
+    justify-content: space-between; /* 讓兩個按鈕分居左右兩端，中間空出距離 */
+    gap: 20px;
+    margin-top: 15px;
+    align-items: center;
+}
 
 button {
     background: rgba(255, 255, 255, 0.05); color: var(--text-color);
@@ -189,16 +216,37 @@ button.active { background: var(--line-color); color: #121212; border-color: var
 .btn-confirm { border-color: var(--accent-green); color: var(--accent-green); }
 .btn-cancel { border-color: var(--accent-cancel); color: var(--accent-cancel); }
 .btn-start { border-color: var(--line-color); color: var(--line-color); font-weight: bold; }
-.btn-restart {
-    width: 100%;
-    margin-top: 0px;        /* 將原本的 8px 改為 0，避免推擠 */
-    /*border-style: dashed;    保留你的虛線樣式 */
-    border-color:var(--line-color); 
-    color: var(--line-color);
-    height: 100%;           /* 確保填滿父容器高度 */
+.btn-restart-icon, .btn-history-icon {
+    flex: 0 0 50px;      /* 固定寬度，不隨父容器拉伸 */
+    height: 50px;       /* 確保是正方形 */
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.2s;
+}
+.btn-restart-icon {
+    border-color: var(--pending-color);
+    color: var(--pending-color);
+}
+.icon-refresh {
+    font-size: 1.5rem;
+    font-weight: bold;
+    /* 讓它看起來更有旋轉感 */
+    display: inline-block;
+    transform: rotate(45deg); 
+}
+
+/* 紀錄按鈕顏色 */
+.btn-history-icon {
+    color: var(--text-color);
+}
+
+.icon-scroll {
+    font-size: 1.4rem;
 }
 
 .confirm-row { 
@@ -267,7 +315,7 @@ button.active { background: var(--line-color); color: #121212; border-color: var
     </div>
 
     <div class="top-actions">
-        <div class="action-icon" onclick="toggleSettings(true)">⋮</div>
+        <div class="action-icon" onclick="toggleSettings(true)">☰</div>
     </div>
 </div>
 
@@ -293,18 +341,22 @@ button.active { background: var(--line-color); color: #121212; border-color: var
                 <button class="btn-confirm" onclick="confirmSelect()">O</button>
             </div>
             <div class="btn-row">
-                <button onclick="toggleHistory(true)" style="flex:1">對戰紀錄</button>
-                <button id="restartBtn" class="btn-restart" onclick="resetGame()" style="flex:1">重啟遊戲</button>
-            </div>
+    <button id="restartBtn" class="btn-restart-icon" onclick="resetGame()" title="重啟遊戲">
+        <span class="icon-refresh">↻</span>
+    </button>
+    
+    <button class="btn-history-icon" onclick="toggleHistory(true)" title="對戰紀錄">
+        <span class="icon-scroll">📜</span>
+    </button>
+</div>
         </div>
     </div>
 
     <div id="infoBox" class="info-overlay">
         <span style="color:var(--line-color); font-weight:bold;">操作說明</span><br><br>
         <div style="text-align:left; font-size:0.9rem; line-height:1.6; color:#ccc;">
-            <b>填寫模式:</b> 點擊格子填號，點擊最後一個輸入號碼可刪除，填滿後按開始。<br>
-            <b>遊戲模式:</b> 點擊數字後按 O 確認。<br>
-            <b>其他設定:</b> 點擊右上角的三個點。
+            <b>填寫模式:</b> 點擊格子填號，填滿後按開始。<br>
+            <b>遊戲模式:</b> 點擊數字後按 O 確認。
         </div><br>
         <button onclick="toggleInfo(false)" style="width: 100%;">我知道了</button>
     </div>
@@ -697,6 +749,4 @@ function setPlayers(v) {
     </script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </body>
-
 </html>
-
