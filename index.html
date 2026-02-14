@@ -56,6 +56,12 @@ button, .cell, .info-icon, .action-icon {
     -webkit-tap-highlight-color: transparent;
     outline: none;
 }
+#confirmRestartBox .btn-row button {
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid var(--border-color);
+}
 
 /* --- 頂部區域與指示燈 --- */
 .header-section {
@@ -295,6 +301,88 @@ button.active { background: var(--line-color); color: #121212; border-color: var
     padding: 15px; margin: -15px; /* 擴大點擊感應區 */
 }
 
+
+
+.btn-cpu-icon {
+    flex: 0 0 50px;
+    height: 50px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    cursor: pointer;
+    font-size: 1.2rem;
+}
+
+/* 第二階段：電腦盤面 Grid 佈局與正方形設定 */
+/* --- 電腦盤面專屬隔離樣式 (新方案) --- */
+
+/* 遮罩層：確保全螢幕覆蓋並垂直水平置中 */
+.cpu-modal-overlay {
+    display: none; /* 由 JS 切換為 flex */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.85);
+    z-index: 3000;
+    justify-content: center;
+    align-items: center;
+}
+
+/* 內容主體：移除所有繼承的定位，確保在 Flex 容器中置中 */
+.cpu-modal-content {
+    background-color: var(--card-bg);
+    padding: 20px;
+    border-radius: 15px;
+    border: 1px solid var(--border-color);
+    width: 85%;
+    max-width: 350px;
+    box-sizing: border-box;
+    text-align: center;
+    /* 這裡不需要 position: absolute 或 top/left，由父層 Flex 控制 */
+}
+
+/* 電腦盤面容器：參考測試成功的 grid-container */
+#cpuGridPreview {
+    display: grid;
+    /* 欄位數量 repeat(${gridSize}, 1fr) 將由 JS 動態注入 */
+    gap: 8px; 
+    width: 100%; 
+    max-width: 320px; /* 限制最大寬度，避免在大螢幕過度拉伸 */
+    margin: 15px auto;
+}
+
+/* 格子樣式：參考測試成功的 grid-item 並繼承原本的 cell 樣式 */
+#cpuGridPreview .cell {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1; /* 強制寬高比為 1:1 正方形 */
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+/* 確保電腦紫色圓點在正方形格子內正確顯示 */
+#cpuGridPreview .cell.player-cpu::after {
+    content: '';
+    position: absolute;
+    width: 70%;
+    height: 70%;
+    background-color: rgba(146, 88, 238, 0.4); /* 電腦專屬紫 */
+    border-radius: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: block; /* 確保顯示 */
+}
+
+
 /* --- 頁尾 --- */
 .footer-info { width: 100%; text-align: center; font-size: 10px; color: #444; margin-top: 20px; padding-bottom: 20px; letter-spacing: 0.5px; }
 
@@ -343,6 +431,10 @@ button.active { background: var(--line-color); color: #121212; border-color: var
             <div class="btn-row">
     <button id="restartBtn" class="btn-restart-icon" onclick="resetGame()" title="重啟遊戲">
         <span class="icon-refresh">↻</span>
+    </button>
+    
+    <button id="viewCpuBtn" class="btn-cpu-icon" onclick="toggleCpuBoard(true)" title="查看電腦盤面" disabled>
+        <span>🤖</span>
     </button>
     
     <button class="btn-history-icon" onclick="toggleHistory(true)" title="對戰紀錄">
@@ -395,18 +487,55 @@ button.active { background: var(--line-color); color: #121212; border-color: var
                 <button id="size7" onclick="setSize(7)">7X7</button>
             </div>
         </div>
+
+        <div class="settings-row" id="winConditionRow">
+    <span class="settings-label">勝利條件</span>
+    <div class="btn-group">
+        <button id="win5" class="active" onclick="setWinLines(5)">5線</button>
+        <button id="win7" onclick="setWinLines(7)">7線</button>
+    </div>
+</div>
         <div class="btn-row"><button onclick="applySettings()" style="width: 100%; border-color:var(--line-color);">套用並重置</button></div>
     </div>
 
     <div id="historyBox" class="info-overlay">
         <span style="color:var(--line-color); font-weight:bold;">對戰紀錄</span>
+        <br><span style ="color:darkkhaki; font-size:0.8rem;">（最新紀錄在最下方）</span><br>
         <div id="logList" style="margin:15px 0; max-height:150px; overflow-y:auto; font-size:0.8rem; text-align:left;"></div>
         <button onclick="toggleHistory(false)" style="width: 100%;">關閉</button>
     </div>
 
+<div id="cpuBoardOverlay" class="cpu-modal-overlay" onclick="toggleCpuBoard(false)">
+    <div id="cpuBoardBox" class="cpu-modal-content" onclick="event.stopPropagation()">
+        <span style="color:var(--pending-color); font-weight:bold;">電腦的盤面</span><br><br>
+        
+        <div style="position: relative; display: inline-block; width: 100%;">
+            <div id="cpuGridPreview"></div>
+            <canvas id="cpuLineCanvas" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 5;"></canvas>
+        </div>
+        
+        <div id="cpuScore" style="margin: 10px 0; font-size: 0.9rem; color: #888;"></div>
+        
+        <button onclick="toggleCpuBoard(false)" style="width: 100%; margin-top: 10px;">
+            關閉
+        </button>
+    </div>
+</div>
+
+    <div id="confirmRestartBox" class="info-overlay">
+    <span style="color:var(--pending-color); font-weight:bold; font-size:1.1rem;">確定要重新開始嗎？</span><br><br>
+    <div style="color:#ccc; font-size:0.9rem; margin-bottom: 20px;">
+        目前的遊戲進度將會遺失。
+    </div>
+    <div class="btn-row">
+        <button onclick="toggleConfirmRestart(false)" style="flex:1; background:transparent;">取消</button>
+        <button onclick="executeReset()" style="flex:1; border-color:var(--pending-color); color:var(--pending-color);">確定</button>
+    </div>
+</div>
+
     <div id="gameOver" class="overlay" onclick="this.style.display='none'">
         <span class="bingo-text" id="winLossText">BINGO!</span>
-        <div style="font-size:0.8rem; color:#888;">遊戲結束，請重啟遊戲或查閱對戰紀錄。<br>本視窗點擊後關閉</div>
+        <div style="font-size:0.8rem; color:#c9c9c9;">遊戲結束，請重啟遊戲或查閱對戰紀錄。<br>本視窗點擊後關閉</div>
     </div>
 
     <footer class="footer-info">
@@ -422,6 +551,7 @@ button.active { background: var(--line-color); color: #121212; border-color: var
     let playerCount = 2; 
     let myOrder = 1;      // <--- 補回這行，預設你是第 1 順位
     let currentTurn = 1; 
+    let targetWinLines = 5; // 預設改為 5 條線
 
     // 盤面資料
     let board = []; 
@@ -453,6 +583,16 @@ button.active { background: var(--line-color); color: #121212; border-color: var
                 cell.onclick = () => handleCellClick(i);
                 grid.appendChild(cell);
             }
+        }
+
+        function setWinLines(lines) {
+        targetWinLines = lines;
+        // 更新 UI 按鈕狀態
+        document.querySelectorAll('#winConditionRow button').forEach(btn => {
+        btn.classList.remove('active');
+            });
+        const activeBtn = document.getElementById('win' + lines);
+        if (activeBtn) activeBtn.classList.add('active');
         }
 
         function updateStatusDisplay() {
@@ -550,30 +690,47 @@ button.active { background: var(--line-color); color: #121212; border-color: var
     }
 }
 
-        function updateGameLogic() {// 檢查勝利條件
+        function updateGameLogic() {
+    // 檢查勝利條件
     let pLines = 0, cLines = 0; 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = '#51cf66'; 
-    ctx.lineWidth = 2;
+    
+    // 重點 1：原本這裡有 ctx.clearRect 和 ctx.strokeStyle 等，現在都由通用函式處理，這裡可以移除。
 
     getWinPaths().forEach(path => {
-        if (path.every(i => selectedIndices.has(i))) { pLines++; drawLine(path); }
-        if (path.every(i => cpuSelectedIndices.has(i))) cLines++;
+        // 玩家連線判定
+        if (path.every(i => selectedIndices.has(i))) { 
+            pLines++; 
+            // 重點 2：移除原本的 drawLine(path); 
+        }
+        // 電腦連線判定
+        if (path.every(i => cpuSelectedIndices.has(i))) {
+            cLines++;
+        }
     });
 
-    scoreEl.innerText = pLines;
-    const goal = gridSize === 5 ? 5 : 7;
+    // 重點 3：在迴圈結束後，呼叫通用函式一次畫出所有玩家連線
+    renderBingoLines('grid', 'lineCanvas', selectedIndices);
 
-    if (pLines >= goal) {
-        // 只有在玩家達成目標時才發射彩花
+    // --- 以下維持原本的勝負判斷邏輯 ---
+    scoreEl.innerText = `${pLines} / ${targetWinLines}`;
+
+    if (pLines >= targetWinLines) {
         confetti({
             particleCount: 150,
             spread: 70,
             origin: { y: 0.6 },
-            zIndex: 9999 // 確保彩花在最上層
+            zIndex: 9999 
         });
+        
+        if (gameMode === 'PVE') {
+            const viewBtn = document.getElementById('viewCpuBtn');
+            if (viewBtn) viewBtn.disabled = false;
+        }
         showGameOver('BINGO!');
-    } else if (gameMode === 'PVE' && cLines >= goal) {
+        
+    } else if (gameMode === 'PVE' && cLines >= targetWinLines) {
+        const viewBtn = document.getElementById('viewCpuBtn');
+        if (viewBtn) viewBtn.disabled = false;
         showGameOver('YOU LOSE!');
     }
 }
@@ -597,10 +754,23 @@ button.active { background: var(--line-color); color: #121212; border-color: var
         }
     });
 }
-
+// 控制彈窗顯示/隱藏
+function toggleConfirmRestart(show) {
+    document.getElementById('confirmRestartBox').style.display = show ? 'block' : 'none';
+}
 function resetGame() {
+    // 如果遊戲還沒開始（在 page1 填號模式），直接重啟沒關係
+    if (document.getElementById('page1').classList.contains('active')) {
+        executeReset();
+    } else {
+        // 如果正在遊戲中，彈出確認視窗
+        toggleConfirmRestart(true);
+    }
+}
+    function executeReset() {
+        toggleConfirmRestart(false);
     console.log("1. resetGame 開始");
-
+    document.getElementById('viewCpuBtn').disabled = false; //看電腦盤面測試用先改為false，正式版應該是true
     state = 'FILL';
     selectedIndices.clear();
     cpuSelectedIndices.clear();
@@ -634,18 +804,20 @@ function resetGame() {
         // 移除原有的 setTimeout 以確保同步執行
         setPlayers(playerCount); 
         setMode(gameMode);
-        
+        setSize(gridSize);
         // 同步所有按鈕 UI
         updateBtnUI('p', playerCount);
         updateBtnUI('mode', gameMode);
         updateBtnUI('order', myOrder);
-        updateBtnUI('size', gridSize);
+        // 初始化分數顯示文字
+        scoreEl.innerText = `0 / ${targetWinLines}`;
         
     } catch (e) {
         console.error("初始化錯誤:", e);
     }
 
     console.log("3. resetGame 結束");
+
 }
 
 
@@ -661,13 +833,58 @@ function resetGame() {
             for (let i = 0; i < gridSize; i++) { d1.push(i * gridSize + i); d2.push((i + 1) * gridSize - (i + 1)); }
             paths.push(d1, d2); return paths;
         }
-        function drawLine(indices) {
-            const cells = grid.querySelectorAll('.cell'), r = grid.getBoundingClientRect(), off = cells[0].offsetWidth / 2;
-            ctx.beginPath();
-            ctx.moveTo(cells[indices[0]].getBoundingClientRect().left - r.left + off, cells[indices[0]].getBoundingClientRect().top - r.top + off);
-            ctx.lineTo(cells[indices[gridSize-1]].getBoundingClientRect().left - r.left + off, cells[indices[gridSize-1]].getBoundingClientRect().top - r.top + off);
-            ctx.stroke();
+        /* --- 通用畫線函式：同時支援玩家與電腦盤面 --- */
+/* --- 最終防錯版：renderBingoLines --- */
+function renderBingoLines(containerId, canvasId, dataSet) {
+    const container = document.getElementById(containerId);
+    const canvas = document.getElementById(canvasId);
+    
+    // 如果傳進來的資料集 (dataSet) 不存在，直接跳出
+    if (!container || !canvas || !dataSet) {
+        console.warn("畫線失敗：找不到容器、畫布或資料集");
+        return;
+    }
+
+    // 1. 同步大小
+    canvas.width = container.offsetWidth;
+    canvas.height = container.offsetHeight;
+    
+    const ctx_local = canvas.getContext('2d');
+    ctx_local.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // 2. 樣式
+    ctx_local.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--line-color').trim() || '#51cf66';
+    ctx_local.lineWidth = 3;
+    ctx_local.lineCap = 'round';
+
+    const cells = container.querySelectorAll('.cell');
+    if (cells.length === 0) return;
+
+    const r = container.getBoundingClientRect();
+    const off = cells[0].offsetWidth / 2;
+
+    // 3. 執行畫線
+/* --- 修正偏移的核心邏輯：改用 Offset --- */
+    getWinPaths().forEach(path => {
+        if (path.every(idx => dataSet.has(idx))) {
+            // 這裡直接取得「格子元素」本身，而不是它的 Rect
+            const startCell = cells[path[0]];
+            const endCell = cells[path[path.length - 1]];
+
+            // 1. 使用 offset 屬性，這會抓取相對於容器的「內部座標」
+            // 2. 這樣就不需要減去 r.left 或 r.top 了
+            const startX = startCell.offsetLeft + off;
+            const startY = startCell.offsetTop + off;
+            const endX = endCell.offsetLeft + off;
+            const endY = endCell.offsetTop + off;
+
+            ctx_local.beginPath();
+            ctx_local.moveTo(startX, startY);
+            ctx_local.lineTo(endX, endY);
+            ctx_local.stroke();
         }
+    });
+}
         function cpuSmartPick() {
             const paths = getWinPaths(), called = historyLog.map(l => l.num);
             let best = null, max = -1;
@@ -682,6 +899,7 @@ function resetGame() {
         function startGame() { 
             state = 'PLAY'; 
             currentTurn = 1; 
+            scoreEl.innerText = `0 / ${targetWinLines}`;
             cpuBoard = Array.from({length: gridSize*gridSize}, (_, i) => i + 1).sort(() => Math.random() - 0.5);
             document.getElementById('page1').classList.remove('active');
             document.getElementById('page2').classList.add('active');
@@ -694,7 +912,39 @@ function resetGame() {
         function toggleInfo(s) { document.getElementById('infoBox').style.display = s ? 'block' : 'none'; }
         function toggleSettings(s) { document.getElementById('settingsBox').style.display = s ? 'block' : 'none'; }
         function toggleHistory(s) { document.getElementById('historyBox').style.display = s ? 'block' : 'none'; }
-        function updateHistoryUI() { document.getElementById('logList').innerHTML = historyLog.map(h => `<div>[${h.player}] 喊了 ${h.num}</div>`).join('') || '尚未開始'; }
+        
+        function updateHistoryUI() {
+    const listElement = document.getElementById('logList');
+    if (!listElement) return;
+
+    if (historyLog.length === 0) {
+        listElement.innerHTML = '尚未開始';
+        return;
+    }
+
+    // 使用 map 產生 HTML，並直接套用你提供的類名
+    listElement.innerHTML = historyLog.slice().map(h => {
+        let colorClass = '';
+        
+        // 根據角色對應到你的 CSS 類名
+        if (h.role === "電腦") {
+            colorClass = 'turn-cpu';
+        } else if (h.role === "玩家 1" || h.player === "你") {
+            colorClass = 'turn-player-1';
+        } else if (h.role === "玩家 2") {
+            colorClass = 'turn-player-2';
+        } else if (h.role === "玩家 3") {
+            colorClass = 'turn-player-3';
+        }
+
+        // 將 colorClass 套用在整行 div 上，這樣會有淡淡的背景色與邊框
+        // 並加上 padding 和 border 讓樣式顯現出來
+        return `<div class="${colorClass}" style="margin-bottom: 6px; padding: 4px 8px; border: 1px solid; border-radius: 4px; font-size: 0.9rem;">
+                    <strong>[${h.player}]</strong> 喊了 ${h.num}
+                </div>`;
+    }).join('');
+}
+
 function setMode(v) {
     gameMode = v;
     const targetBtn = document.getElementById('mode' + v);
@@ -711,7 +961,31 @@ function setMode(v) {
     }
 }
 
-        function setSize(v) { gridSize = v; updateBtnUI('size', v); }
+        function setSize(v) {
+    gridSize = v;
+    updateBtnUI('size', v);
+
+    // 取得勝利條件按鈕
+    const btnWin5 = document.getElementById('win5');
+    const btnWin7 = document.getElementById('win7');
+
+    if (v === 5) {
+        // 5x5 模式：門檻回歸 5 線，且禁用 7 線按鈕
+        targetWinLines = 5;
+        updateBtnUI('win', 5);
+        
+        if (btnWin7) btnWin7.disabled = true;
+        if (btnWin5) btnWin5.disabled = false; // 確保 5 線是可用的
+    } else if (v === 7) {
+        // 7x7 模式：預設跳到 7 線，但 5 線和 7 線都可選
+        targetWinLines = 7;
+        updateBtnUI('win', 7);
+        
+        if (btnWin7) btnWin7.disabled = false;
+        if (btnWin5) btnWin5.disabled = false;
+    }
+}
+
 function setPlayers(v) {
     playerCount = v;
     // 只有在元素存在時才更新 UI
@@ -731,7 +1005,75 @@ function setPlayers(v) {
         }
     }
 }
+// 別忘了新增對應的勝利條件切換函式
+function setWinLines(v) {
+    targetWinLines = v;
+    updateBtnUI('win', v);
+}
 
+function toggleCpuBoard(show) {
+    // 1. 選取新的遮罩層 (Overlay)
+    const overlay = document.getElementById('cpuBoardOverlay');
+    if (!overlay) return;
+
+    if (!show) {
+        overlay.style.display = 'none';
+        return;
+    }
+
+    const container = document.getElementById('cpuGridPreview');
+    if (!container) return;
+
+    // 2. 動態設定 Grid 欄數：根據 gridSize (5或7) 自動配置
+    container.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+    container.innerHTML = ''; 
+
+// 3. 渲染電腦盤面內容
+    cpuBoard.forEach((num, idx) => {
+        const cell = document.createElement('div');
+        cell.className = 'cell'; 
+        cell.innerText = num;
+
+        const targetNum = Number(num);
+        const record = historyLog.find(h => Number(h.num) === targetNum);
+
+        if (record) {
+            // 這裡對接你的 CSS 類名
+            if (record.role === "電腦") {
+                cell.classList.add('player-cpu'); // 對應你的紫色圓圈
+            } else {
+                // 如果是玩家 1 喊的，就套用 player-1，玩家 2 就套用 player-2
+                // 我們從 record.role 中提取數字，或是直接處理字串
+                if (record.role === "玩家 1") {
+                    cell.classList.add('player-1'); 
+                } else if (record.role === "玩家 2") {
+                    cell.classList.add('player-2');
+                }  else {
+                    // 備用方案：如果是「你」喊的，通常對應玩家 1
+                    cell.classList.add('player-1');
+                }
+            }
+        }
+        
+        container.appendChild(cell);
+    });
+
+    // 4. 更新電腦連線進度資訊
+    const cLines = getWinPaths().filter(path => path.every(i => cpuSelectedIndices.has(i))).length;
+    const scoreInfo = document.getElementById('cpuScore');
+    if (scoreInfo) {
+        scoreInfo.innerText = `電腦目前連線：${cLines} / ${targetWinLines}`;
+    }
+
+    // 5. 顯示遮罩層 (設定為 flex 以利內部 cpu-modal-content 置中)
+    overlay.style.display = 'flex';
+    // 6. 關鍵新增：延遲一小段時間確保佈局完成後，畫出電腦盤面的連線
+    if (show) {
+        setTimeout(() => {
+            renderBingoLines('cpuGridPreview', 'cpuLineCanvas', cpuSelectedIndices);
+        }, 200);
+    }
+}
 
         function updateBtnUI(p, v) {
     // 修正：使用更精確的選擇器，確保只選取人數、模式、順位按鈕
@@ -743,7 +1085,20 @@ function setPlayers(v) {
     if (activeBtn) activeBtn.classList.add('active');
 }
         function applySettings() { toggleSettings(false); resetGame(); }
-        function showGameOver(t) { state = 'BINGO'; document.getElementById('winLossText').innerText = t; document.getElementById('gameOver').style.display = 'block'; }
+        function showGameOver(t) { 
+    state = 'BINGO'; 
+    // 將 text 改回 t，確保文字能正確顯示且程式不報錯
+    document.getElementById('winLossText').innerText = t; 
+    document.getElementById('gameOver').style.display = 'flex';
+
+    // 只有在 PVE 模式結束時，才啟用「查看電腦盤面」按鈕
+    if (gameMode === 'PVE') {
+        const viewBtn = document.getElementById('viewCpuBtn');
+        if (viewBtn) {
+            viewBtn.disabled = false;
+        }
+    } 
+}
 
     
     </script>
