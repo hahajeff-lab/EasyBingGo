@@ -770,7 +770,7 @@ function resetGame() {
     function executeReset() {
         toggleConfirmRestart(false);
     console.log("1. resetGame 開始");
-    document.getElementById('viewCpuBtn').disabled = false; //看電腦盤面測試用先改為false，正式版應該是true
+    document.getElementById('viewCpuBtn').disabled = true; //看電腦盤面測試用先改為false，正式版應該是true
     state = 'FILL';
     selectedIndices.clear();
     cpuSelectedIndices.clear();
@@ -1104,4 +1104,5 @@ function toggleCpuBoard(show) {
     </script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </body>
+
 </html>
