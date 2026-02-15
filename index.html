@@ -65,30 +65,47 @@ button, .cell, .info-icon, .action-icon {
 
 /* --- 頂部區域與指示燈 --- */
 .header-section {
-    display: flex;
-    justify-content: space-between; /* 左中右分開 */
-    align-items: flex-start; /* 讓中間容器從上方開始排列 */
-    margin-bottom: 10px;
+    width: 100%;
+    max-width: 200px; /* 這裡請根據你盤面的寬度設定，或是 100% */
+    margin: 0 auto;  /* 置中 */
+    box-sizing: border-box;
+    display: block;   /* 確保它不是 inline-flex */
 }
 .status-container {
+    width: 100% !important; /* 強制寬度 */
     display: flex;
-    flex-direction: column; /* 垂直排列：第一行是模式/分數/人數，第二行是 turn-indicator */
-    align-items: center;    /* 置中顯示 */
+    flex-direction: column;
+    align-items: stretch;    /* 關鍵：強制子元素撐滿寬度 */
+    box-sizing: border-box;
 }
 
 .status-bar {
     display: flex;
-    justify-content: center;   /* 水平置中整組 */
-    align-items: center;       /* 垂直置中每個元素 */
-
-    gap: 8px;
-    margin-bottom: 4px;     /* 與 turn-indicator 留一點距離 */
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    white-space: nowrap;    /* 關鍵：禁止文字換行 */
+    box-sizing: border-box;
+    margin-bottom: 8px;
 }
+
+/* 為了讓「中間」的人數真的在正中央，
+   我們可以給這三個 span 設定相等寬度的基礎（選配） */
+.status-bar .mini-tag {
+    flex: 1; /* 讓三個標籤平分空間 */
+}
+
+.status-bar .mini-tag:nth-child(1) { text-align: left; }
+.status-bar .mini-tag:nth-child(2) { text-align: center; }
+.status-bar .mini-tag:nth-child(3) { text-align: right; }
 
 .score-bar {
     font-size: 1.5rem;
     color: var(--line-color);
     font-weight: bold;
+    width: 100%;
+    text-align: center;
+    display: block; /* 確保它是整行佔據 */
 }
 .mini-tag {
     font-size: 10px;
@@ -107,17 +124,19 @@ button, .cell, .info-icon, .action-icon {
 }
 
 .turn-label {
-    display: inline-block;
+    display: block; /* 1. 改成 block，因為它現在是獨立的一排 */
     padding: 8px 24px;
+    width: 100%;
+    box-sizing: border-box; /* 2. 關鍵修正：讓寬度包含 padding */
     border-radius: 25px;
     font-size: 0.9rem;
     font-weight: bold;
     text-align: center;
     transition: all 0.3s ease;
     background: rgba(255, 255, 255, 0.05);
-    color: var(--line-color);/*#888*/
+    color: var(--line-color);
     border: 1px solid transparent;
-    margin-top: 10px;
+    margin-top: 0px;
 }
 
 .active-turn { animation: pulse-border 1.5s infinite ease-in-out; }
@@ -158,6 +177,25 @@ button, .cell, .info-icon, .action-icon {
     font-weight: 500;
     transition: all 0.2s;
     overflow: hidden;
+}
+/* 預選框樣式：利用 box-shadow 或 border，不影響佈局 */
+.cell.pending-select {
+    /* 改用 border 實現虛線，1.5px 或 2px 效果最好 */
+    border: 2px dashed #ffd900 !important; 
+    
+    /* 關鍵：確保 border 不會撐大格子寬高 */
+    box-sizing: border-box; 
+    
+    /* 背景稍微調淡一點，讓虛線更明顯 */
+    background-color: rgba(255, 217, 0, 0.15) !important;
+    
+    position: relative;
+    z-index: 2;
+}
+
+/* 如果你的 .cell 預設沒有設定 box-sizing，建議也加上這行 */
+.cell {
+    box-sizing: border-box;
 }
 .grid-container[style*="grid-template-columns: repeat(7"] .cell {
     font-size: 0.9rem; /* 專門針對 7x7 的字體大小 */
@@ -394,13 +432,18 @@ button.active { background: var(--line-color); color: #121212; border-color: var
     <div class="info-icon" onclick="toggleInfo(true)">i</div>
 
     <div class="status-container">
-        <div class="status-bar">
-            <span id="mode-display" class="mini-tag">PVP</span>
-            <span class="score-bar">SCORE: <span id="score">0</span></span>
-            <span id="players-display" class="mini-tag">2人</span>
-        </div>
-        <div id="turn-indicator" class="turn-label">✍️ 填寫號碼中</div>
+    <div class="score-bar">
+        SCORE: <span id="score">0</span>
     </div>
+
+    <div class="status-bar">
+        <span id="mode-display" class="mini-tag">PVP</span>
+        <span id="players-display" class="mini-tag">2人</span>
+        <span id="target-display" class="mini-tag">目標: 5</span> 
+    </div>
+
+    <div id="turn-indicator" class="turn-label">✍️ 填寫號碼中</div>
+</div>
 
     <div class="top-actions">
         <div class="action-icon" onclick="toggleSettings(true)">☰</div>
@@ -598,6 +641,14 @@ button.active { background: var(--line-color); color: #121212; border-color: var
         function updateStatusDisplay() {
             document.getElementById('mode-display').innerText = gameMode;
             document.getElementById('players-display').innerText = playerCount + '人';
+            // 新增：更新目標連線數
+        const targetEl = document.getElementById('target-display');
+        if (targetEl) {
+            targetEl.innerText = '目標: ' + targetWinLines;
+        }
+    
+        // 確保重置時分數歸零
+        scoreEl.innerText = '0';
         }
 
         function setOrder(order) {
@@ -614,25 +665,62 @@ button.active { background: var(--line-color); color: #121212; border-color: var
 }
 
         function handleCellClick(i) {
-            if (state === 'FILL') {
-                if (board[i] === null) { if (board.filter(x=>x).length < gridSize*gridSize) board[i] = board.filter(x=>x).length + 1; }
-                else if (board[i] === board.filter(x=>x).length) board[i] = null;
-            } else if (state === 'PLAY') {
-                if ((gameMode === 'PVP' || currentTurn === myOrder) && board[i] && !selectedIndices.has(i)) {
-                    pendingChoice = i; displayBox.innerText = board[i];
-                }
-            }
-            renderBoard(); checkButtons();
+    if (state === 'FILL') {
+        // 填寫模式維持原邏輯，因為涉及數字順序計算，需要 renderBoard
+        if (board[i] === null) { 
+            if (board.filter(x => x).length < gridSize * gridSize) 
+                board[i] = board.filter(x => x).length + 1; 
+        } else if (board[i] === board.filter(x => x).length) {
+            board[i] = null;
         }
+        renderBoard(); 
+    } else if (state === 'PLAY') {
+        // 檢查是否輪到該玩家，且該格有數字、未被選過
+        if ((gameMode === 'PVP' || currentTurn === myOrder) && board[i] && !selectedIndices.has(i)) {
+            pendingChoice = i; 
+            displayBox.innerText = board[i];
+
+            // --- 效能優化：手動切換 CSS，不觸發 renderBoard ---
+            // 1. 使用 querySelectorAll('.cell') 確保索引精準，不被 canvas 影響
+            const allCells = grid.querySelectorAll('.cell');
+            
+            // 2. 移除所有格子上的預選樣式
+            allCells.forEach(cell => cell.classList.remove('pending-select'));
+            
+            // 3. 根據索引 i 直接指派樣式給正確的 DOM 元素
+            if (allCells[i]) {
+                allCells[i].classList.add('pending-select');
+            }
+        }
+    }
+    checkButtons();
+}
 
         function confirmSelect() {
-            if (pendingChoice !== null) {
-                const num = board[pendingChoice]; pendingChoice = null; displayBox.innerText = '-';
-                processMove(num, `玩家 ${currentTurn}`);
-                currentTurn = (currentTurn % playerCount) + 1;
-                checkNextTurn();
-            }
-        }
+    if (pendingChoice !== null) {
+        const num = board[pendingChoice]; 
+        
+        // 1. 重置預選狀態與顯示
+        pendingChoice = null; 
+        displayBox.innerText = '-';
+
+        // 2. 執行選號邏輯（這通常會包含將數字加入 selectedIndices）
+        processMove(num, `玩家 ${currentTurn}`);
+
+        // 3. 切換玩家順位
+        currentTurn = (currentTurn % playerCount) + 1;
+
+        // 4. 重點：呼叫 renderBoard() 確保黃框消失並更新盤面視覺
+        // 如果你的 processMove 裡面已經有呼叫 renderBoard()，這行可以省略
+        renderBoard(); 
+
+        // 5. 檢查下一輪狀態（如電腦出牌或檢查輸贏）
+        checkNextTurn();
+        
+        // 6. 更新按鈕狀態
+        checkButtons();
+    }
+}
 
         function processMove(num, pName) {
     // 確保號碼是數字型別
@@ -694,8 +782,6 @@ button.active { background: var(--line-color); color: #121212; border-color: var
     // 檢查勝利條件
     let pLines = 0, cLines = 0; 
     
-    // 重點 1：原本這裡有 ctx.clearRect 和 ctx.strokeStyle 等，現在都由通用函式處理，這裡可以移除。
-
     getWinPaths().forEach(path => {
         // 玩家連線判定
         if (path.every(i => selectedIndices.has(i))) { 
@@ -708,19 +794,25 @@ button.active { background: var(--line-color); color: #121212; border-color: var
         }
     });
 
-    // 重點 3：在迴圈結束後，呼叫通用函式一次畫出所有玩家連線
     renderBingoLines('grid', 'lineCanvas', selectedIndices);
 
-    // --- 以下維持原本的勝負判斷邏輯 ---
-    scoreEl.innerText = `${pLines} / ${targetWinLines}`;
+    // --- 增加PVE平手判斷 ---
+    scoreEl.innerText = pLines;//scoreEl.innerText = `${pLines} / ${targetWinLines}`
 
-    if (pLines >= targetWinLines) {
-        confetti({
-            particleCount: 150,
-            spread: 70,
-            origin: { y: 0.6 },
-            zIndex: 9999 
-        });
+    // 1. 優先判斷同時賓果 (平手)
+    if (pLines >= targetWinLines && (gameMode === 'PVE' && cLines >= targetWinLines)) {
+        // 解鎖按鈕
+        const viewBtn = document.getElementById('viewCpuBtn');
+        if (viewBtn) viewBtn.disabled = false;
+        
+        // 慶祝特效 (平手也值得慶祝一下)
+        confetti({ particleCount: 100, spread: 50, origin: { y: 0.6 }, zIndex: 9999 });
+        
+        showGameOver('DRAW! (同時賓果)');
+
+    // 2. 判斷玩家獨自獲勝
+    } else if (pLines >= targetWinLines) {
+        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, zIndex: 9999 });
         
         if (gameMode === 'PVE') {
             const viewBtn = document.getElementById('viewCpuBtn');
@@ -728,6 +820,7 @@ button.active { background: var(--line-color); color: #121212; border-color: var
         }
         showGameOver('BINGO!');
         
+    // 3. 判斷電腦獨自獲勝
     } else if (gameMode === 'PVE' && cLines >= targetWinLines) {
         const viewBtn = document.getElementById('viewCpuBtn');
         if (viewBtn) viewBtn.disabled = false;
@@ -735,21 +828,33 @@ button.active { background: var(--line-color); color: #121212; border-color: var
     }
 }
 
-       function renderBoard() {
+      function renderBoard() {
+    // 1. 抓取所有格子
     const cells = grid.querySelectorAll('.cell');
+    
+    // 2. 開始跑每一格的狀態更新
     cells.forEach((cell, i) => {
+        // 設定號碼 (如果沒有號碼就顯示空白)
         cell.innerText = board[i] || '';
+        
+        // --- 核心修正：同步清除「手動點擊」與「邏輯判斷」的預選樣式 ---
+        // 這一行會根據 pendingChoice 是否等於當前格子，自動決定要不要加 pending 樣式
+        // 同時我們也要順便移除 handleCellClick 手動加上的 pending-select
+        cell.classList.remove('pending-select'); 
         cell.classList.toggle('pending', pendingChoice === i);
+        
+        // 清除玩家顏色，準備重新標記
         cell.classList.remove('player-1', 'player-2', 'player-3', 'player-cpu');
         
+        // 檢查歷史紀錄，決定這格是誰選的
         const log = historyLog.find(l => l.num === board[i]);
         if (log) {
             if (log.role === '電腦') {
                 cell.classList.add('player-cpu');
             } else {
-                // 從 role (例如 "玩家 1") 抓取數字，就不怕 displayName 變成 "你"
+                // 從 "玩家 1" 中切出數字 1
                 const playerNum = log.role.split(' ')[1];
-                cell.classList.add(`player-${playerNum}`);
+                if (playerNum) cell.classList.add(`player-${playerNum}`);
             }
         }
     });
@@ -810,7 +915,7 @@ function resetGame() {
         updateBtnUI('mode', gameMode);
         updateBtnUI('order', myOrder);
         // 初始化分數顯示文字
-        scoreEl.innerText = `0 / ${targetWinLines}`;
+        scoreEl.innerText = '0'; //scoreEl.innerText = `${pLines} / ${targetWinLines}`
         
     } catch (e) {
         console.error("初始化錯誤:", e);
@@ -899,7 +1004,7 @@ function renderBingoLines(containerId, canvasId, dataSet) {
         function startGame() { 
             state = 'PLAY'; 
             currentTurn = 1; 
-            scoreEl.innerText = `0 / ${targetWinLines}`;
+            scoreEl.innerText = `0 `;//scoreEl.innerText = `${pLines} / ${targetWinLines}`
             cpuBoard = Array.from({length: gridSize*gridSize}, (_, i) => i + 1).sort(() => Math.random() - 0.5);
             document.getElementById('page1').classList.remove('active');
             document.getElementById('page2').classList.add('active');
@@ -1104,5 +1209,4 @@ function toggleCpuBoard(show) {
     </script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </body>
-
 </html>
